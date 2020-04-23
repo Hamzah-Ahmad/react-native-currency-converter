@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Picker } from "@react-native-community/picker";
+import { Icon } from "react-native-elements";
 import {
   Text,
   StyleSheet,
@@ -42,7 +43,7 @@ const styles = StyleSheet.create({
   },
   loadingIndicator: {
     position: "absolute",
-    marginTop: 340,
+    marginTop: 200,
     marginLeft: 150,
   },
   picker: {
@@ -67,12 +68,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 10,
     width: 350,
-    marginTop: 20,
+    marginTop: 30,
   },
 });
 
 const Homepage = (props) => {
-  const [inputVal, setInputVal] = useState(10);
+  const [inputVal, setInputVal] = useState(0);
   const [outputVal, setOutputVal] = useState(0);
   const [queryCurrency, setQueryCurrency] = useState("GBP");
   const [targetCurrency, setTargetCurrency] = useState("USD");
@@ -80,22 +81,29 @@ const Homepage = (props) => {
   const [error, setError] = useState("");
   const [loadingApp, setLoadingApp] = useState(false);
   const host = "api.frankfurter.app";
-  const USD = "USD";
+
   const handlePress = () => {
     setIsLoading(true);
-    axios
-      .get(
-        `https://${host}/latest?amount=${inputVal}&from=${queryCurrency}&to=${targetCurrency}`
-      )
-      .then((res) => {
-        setIsLoading(false);
-        setOutputVal(res.data.rates[targetCurrency]);
-      })
-      .catch((err) => {
-        console.log(err);
-        setIsLoading(false);
-        setError("Something went wrong!");
-      });
+    setError("");
+    let inputVar = parseFloat(inputVal);
+    if (inputVar == 0) {
+      setOutputVal(0);
+    } else if (isNaN(inputVar)) {
+      setError("Please enter a numeric value");
+    } else {
+      axios
+        .get(
+          `https://${host}/latest?amount=${inputVar}&from=${queryCurrency}&to=${targetCurrency}`
+        )
+        .then((res) => {
+          setOutputVal(res.data.rates[targetCurrency]);
+        })
+        .catch((err) => {
+          console.log(err);
+          setError("Something went wrong!");
+        });
+    }
+    setIsLoading(false);
   };
 
   const changeTargetCurrency = async (val) => {
@@ -117,6 +125,9 @@ const Homepage = (props) => {
   };
   const load = async () => {
     setLoadingApp(true);
+    setInputVal(0);
+    setOutputVal(0);
+    setError("");
     try {
       const targetCurrency = await AsyncStorage.getItem("TARGET_CURRENCY");
 
@@ -161,7 +172,6 @@ const Homepage = (props) => {
                 selectedValue={queryCurrency}
                 style={styles.picker}
                 onValueChange={(itemValue, itemIndex) => {
-                  console.log("On Value Change ran");
                   changeQueryCurrency(itemValue);
                 }}
               >
@@ -175,9 +185,12 @@ const Homepage = (props) => {
               </Picker>
             </View>
             <TextInput
-              onChangeText={(text) => setInputVal(parseInt(text))}
-              value={`${inputVal}`}
+              onChangeText={(text) => {
+                setInputVal(text);
+              }}
               style={styles.input}
+              keyboardType={"number-pad"}
+              value={`${inputVal}`}
             />
           </View>
           <View>
@@ -186,7 +199,6 @@ const Homepage = (props) => {
                 selectedValue={targetCurrency}
                 style={styles.picker}
                 onValueChange={(itemValue, itemIndex) => {
-                  console.log("On Value Change ran");
                   changeTargetCurrency(itemValue);
                   setOutputVal(0);
                 }}
@@ -207,28 +219,28 @@ const Homepage = (props) => {
               editable={false}
             />
           </View>
-          {error ? (
-            <Text style={styles.errorText}>Something Went Wrong</Text>
-          ) : null}
-          <TouchableOpacity
-            style={styles.touchableOpacity}
-            onPress={handlePress}
-          >
-            <Text style={styles.btnText}>Convert</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.touchableOpacity}
-            onPress={reverseCurrencies}
-          >
-            <Text style={styles.btnText}>Reverse</Text>
-          </TouchableOpacity>
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
           {isLoading ? (
             <ActivityIndicator
               size="large"
               color="#f2f2f2"
               style={styles.loadingIndicator}
             ></ActivityIndicator>
-          ) : null}
+          ) : (
+            <Icon
+              name="exchange"
+              type="font-awesome"
+              color="#fff"
+              underlayColor="#2b416a"
+              onPress={() => reverseCurrencies()}
+            />
+          )}
+          <TouchableOpacity
+            style={styles.touchableOpacity}
+            onPress={handlePress}
+          >
+            <Text style={styles.btnText}>Convert</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <View>
